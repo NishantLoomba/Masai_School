@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Dashboard</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  padding: 20px;
+}
+
+section {
+  margin-bottom: 30px;
+}
+
+#userList li {
+  padding: 5px 0;
+}
+
+  </style>
+</head>
+<body>
+  <h1>User Dashboard</h1>
+
+  <section id="userListSection">
+    <h2>Registered Users</h2>
+    <ul id="userList"></ul>
+  </section>
+
+  <section id="addUserSection">
+    <h2>Add New User</h2>
+    <form id="addUserForm">
+      <input type="text" id="name" placeholder="Name" required><br><br>
+      <input type="email" id="email" placeholder="Email" required><br><br>
+      <button type="submit">Add User</button>
+    </form>
+    <div id="formMessage"></div>
+  </section>
+
+  <script>
+    const apiUrl = 'https://mockapi.io/users'; // Replace with actual mockapi endpoint
+const userList = document.getElementById('userList');
+const form = document.getElementById('addUserForm');
+const formMessage = document.getElementById('formMessage');
+
+// Fetch and display all users
+async function fetchUsers() {
+  try {
+    const res = await fetch(apiUrl);
+    const users = await res.json();
+    userList.innerHTML = '';
+
+    users.forEach(user => {
+      const li = document.createElement('li');
+      li.textContent = `${user.name} - ${user.email}`;
+      userList.appendChild(li);
+    });
+  } catch (error) {
+    userList.innerHTML = '<li style="color:red;">Failed to load users.</li>';
+  }
+}
+
+// Add new user
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  formMessage.textContent = '';
+
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+
+  if (!name || !email) {
+    formMessage.style.color = 'red';
+    formMessage.textContent = 'All fields are required.';
+    return;
+  }
+
+  try {
+    // Check for duplicates
+    const res = await fetch(apiUrl);
+    const users = await res.json();
+    const duplicate = users.find(u => u.email === email);
+
+    if (duplicate) {
+      formMessage.style.color = 'red';
+      formMessage.textContent = 'User with this email already exists.';
+      return;
+    }
+
+    // POST request to add new user
+    const postRes = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email })
+    });
+
+    if (!postRes.ok) throw new Error('Failed to add user.');
+
+    // Refresh user list
+    await fetchUsers();
+
+    form.reset();
+    formMessage.style.color = 'green';
+    formMessage.textContent = 'User added successfully!';
+  } catch (err) {
+    formMessage.style.color = 'red';
+    formMessage.textContent = err.message;
+  }
+});
+
+// Initial load
+fetchUsers();
+
+  </script>
+</body>
+</html>

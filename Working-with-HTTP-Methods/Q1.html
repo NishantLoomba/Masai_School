@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Search</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .product { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Product Search</h2>
+        <label>Category:
+            <select id="category">
+                <option value="electronics">Electronics</option>
+                <option value="clothing">Clothing</option>
+                <option value="books">Books</option>
+            </select>
+        </label>
+        <label>Min Price: <input type="number" id="minPrice" placeholder="1000"></label>
+        <label>Max Price: <input type="number" id="maxPrice" placeholder="5000"></label>
+        <button onclick="fetchProducts()">Search</button>
+        
+        <div id="loading" style="display:none;">Loading...</div>
+        <div id="error" style="display:none;color:red;"></div>
+        <div id="productList" class="grid"></div>
+    </div>
+    
+    <script>
+        async function fetchProducts() {
+            const category = document.getElementById('category').value;
+            const minPrice = document.getElementById('minPrice').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+            const productList = document.getElementById('productList');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            
+            productList.innerHTML = '';
+            error.style.display = 'none';
+            loading.style.display = 'block';
+            
+            const apiUrl = `https://mockapi.io/products?category=${category}&min_price=${minPrice}&max_price=${maxPrice}&sort=asc`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Failed to fetch products');
+                
+                const data = await response.json();
+                productList.innerHTML = data.map(product => `
+                    <div class="product">
+                        <img src="${product.image}" alt="${product.name}">
+                        <h4>${product.name}</h4>
+                        <p>$${product.price}</p>
+                    </div>
+                `).join('');
+            } catch (err) {
+                error.innerText = err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
