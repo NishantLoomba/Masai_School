@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase User CRUD</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    input, button { padding: 8px; margin-top: 5px; }
+    #message { font-weight: bold; margin-top: 10px; }
+    form { margin-bottom: 20px; }
+    .edit-btn { color: blue; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <h2>Firebase User Dashboard</h2>
+
+  <form id="userForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <button type="submit">Add User</button>
+    <button type="button" id="cancelEdit" style="display: none;">Cancel Edit</button>
+  </form>
+
+  <div id="message"></div>
+
+  <table id="userTable">
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Action</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const dbUrl = "https://YOUR_FIREBASE_DB_URL/users"; // <- No `.json` here!
+    const form = document.getElementById("userForm");
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const tableBody = document.querySelector("#userTable tbody");
+    const messageDiv = document.getElementById("message");
+    const cancelBtn = document.getElementById("cancelEdit");
+
+    let isEditing = false;
+    let currentUserId = null;
+
+    // Load users on page load
+    fetchUsers();
+
+    // Submit handler
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+
+      if (!name || !email) return showMessage("All fields are required.", "red");
+
+      if (isEditing && currentUserId) {
+        await updateUser(currentUserId, { name, email });
+      } else {
+        await addUser({ name, email });
+      }
+
+      form.reset();
+      cancelBtn.style.display = "none";
+      isEditing = false;
+      currentUserId = null;
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      isEditing = false;
+      currentUserId = null;
+      form.reset();
+      cancelBtn.style.display = "none";
+    });
+
+    async function fetchUsers() {
+      tableBody.innerHTML = "";
+      try {
+        const res = await fetch(`${dbUrl}.json`);
+        const data = await res.json();
+        if (!data) return showMessage("No users found.", "gray");
+
+        Object.entries(data).forEach(([id, user]) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td><span class="edit-btn" onclick="editUser('${id}', '${user.name}', '${user.email}')">Edit</span></td>
+          `;
+          tableBody.appendChild(row);
+        });
+        showMessage("User list updated.", "green");
+      } catch (err) {
+        showMessage("Failed to fetch users.", "red");
+      }
+    }
+
+    async function addUser(user) {
+      try {
+        const res = await fetch(`${dbUrl}.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user)
+        });
+        if (!res.ok) throw new Error("Add failed.");
+        showMessage("User added!", "green");
+        fetchUsers();
+      } catch (err) {
+        showMessage("Error adding user.", "red");
+      }
+    }
+
+    async function updateUser(id, user) {
+      try {
+        const res = await fetch(`${dbUrl}/${id}.json`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user)
+        });
+        if (!res.ok) throw new Error("Update failed.");
+        showMessage("User updated!", "green");
+        fetchUsers();
+      } catch (err) {
+        showMessage("Error updating user.", "red");
+      }
+    }
+
+    function editUser(id, name, email) {
+      nameInput.value = name;
+      emailInput.value = email;
+      currentUserId = id;
+      isEditing = true;
+      cancelBtn.style.display = "inline";
+    }
+
+    function showMessage(text, color) {
+      messageDiv.textContent = text;
+      messageDiv.style.color = color;
+    }
+
+    // Make editUser globally accessible
+    window.editUser = editUser;
+  </script>
+</body>
+</html>

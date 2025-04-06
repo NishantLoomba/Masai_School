@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase User List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    table {
+      width: 60%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    #message {
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Firebase User List</h2>
+  <div id="message"></div>
+  <table id="userTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const dbUrl = "https://YOUR_FIREBASE_DB_URL/users.json"; // <-- Replace with your database URL
+    const messageDiv = document.getElementById("message");
+    const tableBody = document.querySelector("#userTable tbody");
+
+    async function fetchUsers() {
+      try {
+        const response = await fetch(dbUrl);
+        if (!response.ok) throw new Error("Failed to fetch users.");
+
+        const data = await response.json();
+
+        if (!data || Object.keys(data).length === 0) {
+          messageDiv.style.color = "red";
+          messageDiv.innerText = "No users found.";
+          return;
+        }
+
+        Object.values(data).forEach(user => {
+          const row = document.createElement("tr");
+
+          const nameCell = document.createElement("td");
+          nameCell.textContent = user.name;
+
+          const emailCell = document.createElement("td");
+          emailCell.textContent = user.email;
+
+          row.appendChild(nameCell);
+          row.appendChild(emailCell);
+          tableBody.appendChild(row);
+        });
+
+        messageDiv.style.color = "green";
+        messageDiv.innerText = "User list loaded successfully.";
+
+      } catch (error) {
+        messageDiv.style.color = "red";
+        messageDiv.innerText = error.message;
+      }
+    }
+
+    fetchUsers();
+  </script>
+</body>
+</html>

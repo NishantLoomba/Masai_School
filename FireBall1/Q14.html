@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase User CRUD App</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input, button { padding: 8px; margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; }
+    .action-btn { color: blue; cursor: pointer; text-decoration: underline; margin-right: 10px; }
+    #message { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h2>User Dashboard (Firebase)</h2>
+
+  <form id="userForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <button type="submit">Submit</button>
+    <button type="button" id="cancelEdit" style="display: none;">Cancel Edit</button>
+  </form>
+
+  <div id="message"></div>
+
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+  </table>
+
+  <script>
+    const dbUrl = "https://YOUR_FIREBASE_DB_URL/users"; // <== without .json here
+    const form = document.getElementById("userForm");
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const tableBody = document.getElementById("userTable");
+    const cancelEditBtn = document.getElementById("cancelEdit");
+    const messageDiv = document.getElementById("message");
+
+    let isEditing = false;
+    let editingId = null;
+
+    // Fetch users on load
+    fetchUsers();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+
+      if (!name || !email) return showMessage("All fields required.", "red");
+
+      if (isEditing) {
+        await updateUser(editingId, { name, email });
+      } else {
+        await addUser({ name, email });
+      }
+
+      form.reset();
+      cancelEditBtn.style.display = "none";
+      isEditing = false;
+      editingId = null;
+    });
+
+    cancelEditBtn.addEventListener("click", () => {
+      isEditing = false;
+      editingId = null;
+      form.reset();
+      cancelEditBtn.style.display = "none";
+    });
+
+    async function fetchUsers() {
+      tableBody.innerHTML = "";
+      try {
+        const res = await fetch(`${dbUrl}.json`);
+        const data = await res.json();
+        if (!data) {
+          showMessage("No users found.", "gray");
+          return;
+        }
+
+        Object.entries(data).forEach(([id, user]) => {
+          const row = document.createElement("tr");
+          row.id = `user-${id}`;
+          row.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td>
+              <span class="action-btn" onclick="editUser('${id}', '${user.name}', '${user.email}')">Edit</span>
+              <span class="action-btn" onclick="deleteUser('${id}')">Delete</span>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+
+        showMessage("Users loaded successfully.", "green");
+      } catch (err) {
+        showMessage("Failed to fetch users.", "red");
+      }
+    }
+
+    async function addUser(user) {
+      try {
+        const res = await fetch(`${dbUrl}.json`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user)
+        });
+        if (!res.ok) throw new Error();
+        showMessage("User added!", "green");
+        fetchUsers();
+      } catch {
+        showMessage("Failed to add user.", "red");
+      }
+    }
+
+    async function updateUser(id, user) {
+      try {
+        const res = await fetch(`${dbUrl}/${id}.json`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user)
+        });
+        if (!res.ok) throw new Error();
+        showMessage("User updated!", "green");
+        fetchUsers();
+      } catch {
+        showMessage("Failed to update user.", "red");
+      }
+    }
+
+    function editUser(id, name, email) {
+      nameInput.value = name;
+      emailInput.value = email;
+      isEditing = true;
+      editingId = id;
+      cancelEditBtn.style.display = "inline";
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("Are you sure you want to delete this user?")) return;
+
+      try {
+        const res = await fetch(`${dbUrl}/${id}.json`, {
+          method: "DELETE"
+        });
+        if (!res.ok) throw new Error();
+        document.getElementById(`user-${id}`).remove();
+        showMessage("User deleted!", "green");
+      } catch {
+        showMessage("Failed to delete user.", "red");
+      }
+    }
+
+    function showMessage(text, color) {
+      messageDiv.textContent = text;
+      messageDiv.style.color = color;
+    }
+
+    // Make edit/delete functions global
+    window.editUser = editUser;
+    window.deleteUser = deleteUser;
+  </script>
+
+</body>
+</html>
